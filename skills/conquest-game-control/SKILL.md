@@ -115,7 +115,9 @@ Use this as the gameplay baseline when selecting legal actions.
 ## Preconditions
 - Server is reachable at `http://localhost:8000`.
 - Account already exists.
-- Deck exists for that account under `decks/DeckStorage/<username>/`.
+- **Deck storage is pre-populated by server admin** under `decks/DeckStorage/<username>/`.
+  - The bot/LLM cannot upload decks at runtime; decks must exist on the server beforehand.
+  - To check available decks, use `GET /api/request_deck/` with `{"name": "<username>", "deck_name": ""}` to list decks, or browse `decks/DeckStorage/<username>/` directly.
 
 ## Lobby control over websocket
 1. Create an authenticated HTTP session:
@@ -159,6 +161,8 @@ Use this as the gameplay baseline when selecting legal actions.
 - `POST /api/request_deck/` - Request deck text
   - Request: `{"name": "...", "deck_name": "..."}`
   - Response: `{"status": "success", "deck_text": "..."}`
+- `GET /api/ai_decks/<bot_name>/` - List decks available to a bot with warlord/faction summary
+  - Response: `{"status": "success", "bot_name": "...", "decks": [{"deck_name": "...", "warlord": "...", "faction": "..."}, ...]}`
 
 ### AI lobby management
 - `GET /api/ai_lobby/<hash>/` - Query a lobby by AI join hash
@@ -166,6 +170,75 @@ Use this as the gameplay baseline when selecting legal actions.
 - `POST /api/ai_join/<hash>/` - Bot joins a lobby by AI join hash
   - Request: `{"bot_name": "...", "deck_name": "..."}`
   - Response: `{"status": "success", "message": "...", "lobby": {...}}`
+
+### AI in-game management (REST-only bot flow)
+- `GET /api/ai_game/<game_id>/?bot_name=Conqueror` - Full game snapshot for the bot
+  - Returns: `phase`, `mode`, `info_box` (what the human info-box shows), `prompt` (current choice with Yes/No mapping), `bot` (hand, deck_loaded, warlord, faction, resources), `opponent` (warlord, faction, deck_loaded, hand_count, deck_count)
+- `POST /api/ai_action/<game_id>/` - Submit a bot action
+  - Body fields (JSON):
+    - `bot_name` (default `Conqueror`)
+    - `answer`: `"Yes"` or `"No"` for binary prompts (preferred)
+    - `action`: raw slash-path like `"CHOICE/1"`, `"pass-P1"`, `"HAND/1/0"`
+    - `load_deck`: deck filename to load (SETUP only)
+    - `load_random`: `true` to load a random deck (SETUP only)
+  - Response: `{"status": "success", "message": "...", "submitted_action": "...", "game": {...}}`
+
+## Post-join game startup checklist (REST-only)
+**Do these in order as soon as the bot is in a live game. All steps use REST only — no WebSocket required.**
+
+### Step 1: Read opponent faction
+```http
+GET /api/ai_game/<game_id>/?bot_name=Conqueror
+```
+- Read `opponent.warlord` and `opponent.faction`.
+- Use this to pick a counter-deck.
+
+### Step 2: List available decks and select one
+```http
+GET /api/ai_decks/Conqueror/
+```
+- Returns each deck with `deck_name`, `warlord`, `faction`.
+- Pick a deck that counters the opponent's faction.
+
+### Step 3: Load your deck
+```http
+POST /api/ai_action/<game_id>/
+Body: {"bot_name": "Conqueror", "load_deck": "<deck_name>"}
+```
+- Or use `{"load_random": true}` for a random deck.
+- Deck file must exist at `decks/DeckStorage/Conqueror/<deck_name>` (exact filename, including spaces).
+- On success, response includes `game.bot.deck_loaded: true` and `game.bot.hand`.
+
+### Step 4: Scan hand and answer mulligan
+```http
+GET /api/ai_game/<game_id>/?bot_name=Conqueror
+```
+- Read `bot.hand` (list of card names).
+- Read `prompt`:
+  - `prompt.active` — whether a choice is pending
+  - `prompt.is_bots_turn` — whether the bot is the one being asked
+  - `prompt.context` — e.g. `"Mulligan Opening Hand?"`
+  - `prompt.binary_yes_no` — `true` when choices are exactly `["Yes", "No"]`
+  - `prompt.yes_index` / `prompt.no_index` — which index maps to Yes/No
+
+Answer via REST:
+```http
+POST /api/ai_action/<game_id>/
+Body: {"bot_name": "Conqueror", "answer": "No"}
+```
+- Use `"Yes"` to mulligan (redraw), `"No"` to keep the hand.
+- For non-binary prompts, use `{"action": "CHOICE/<index>"}` where index matches the choice position.
+
+**Default strategy**: prefer `"No"` unless the hand is clearly unplayable.
+
+**Mulligan order**: player 1 is asked first, then player 2. After both answer, the game proceeds to DEPLOY phase (or Necron enslaved-faction choice if applicable).
+
+## WebSocket fallback (legacy)
+For bots that need real-time event streaming, the WebSocket interface is still available:
+- URL: `ws://localhost:8000/ws/play/<game_id>/`
+- Deck load (must use double slash): `{"message": "CHAT_MESSAGE//loaddeckbot/<bot_username>/<deck_name>"}`
+- Mulligan: `{"message": "BUTTON PRESSED/CHOICE/0"}` (Yes) or `CHOICE/1` (No)
+- Single-slash `CHAT_MESSAGE/loaddeckbot/...` is treated as chat and will NOT load a deck.
 
 ## Game notes (mechanics)
 - Planet reward values in engine data are stored as `(cards, resources)` order (not `(resources, cards)`), so a planet entry like `(0, 2)` means 0 cards and 2 resources.

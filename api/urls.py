@@ -15,4 +15,7 @@ urlpatterns = [
     path("request_deck/", views.request_deck_text_given_name, name="request_deck_text_given_name"),
     path('ai_lobby/<str:ai_hash>/', views.get_ai_lobby_by_hash, name='get_ai_lobby_by_hash'),
     path('ai_join/<str:ai_hash>/', views.ai_join_lobby, name='ai_join_lobby'),
+    path('ai_game/<str:game_id>/', views.get_ai_game, name='get_ai_game'),
+    path('ai_action/<str:game_id>/', views.ai_game_action, name='ai_game_action'),
+    path('ai_decks/<str:bot_name>/', views.list_ai_decks, name='list_ai_decks'),
 ]

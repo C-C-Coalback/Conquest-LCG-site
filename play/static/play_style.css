@@ -953,9 +953,9 @@ legend {
     max-width: 14vw;
     min-height: 4vh;
     max-height: 21.5vh;
-    top: 24%;
+    top: 42px;
+    left: 985;
     border: 5px solid blue;
-    right: 0;
     z-index: 1000;
     overflow-x:hidden;
     overflow-y:auto;
