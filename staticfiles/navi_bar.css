@@ -28,6 +28,14 @@
     right: 140px;
 }
 
+.version-info {
+    display: block;
+    color: #888;
+    font-size: 0.85em;
+    font-weight: normal;
+    padding: 14px 16px;
+}
+
 #log-out-button {
     position:absolute;
     top: 20px;
