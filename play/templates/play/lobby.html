@@ -280,7 +280,7 @@
                     document.getElementById("add_players_to_me").innerHTML += `<p>` + usernames[i] + `</p>`;
                 }
             } else {
-                addLobby(split_string[1], split_string[2], split_string[3], split_string[4], split_string[5], split_string[6])
+                addLobby(split_string[1], split_string[2], split_string[3], split_string[4], split_string[5], split_string[6], split_string[9])
             }
         };
 
@@ -396,9 +396,18 @@
             document.body.appendChild(ourAudio);
         }
 
-        function addLobby(nameOfPlayerOne, nameOfPlayerTwo, private, apoka, sector, time) {
+        function addLobby(nameOfPlayerOne, nameOfPlayerTwo, private, apoka, sector, time, aiHash) {
+            // Create unique ID for this lobby to prevent duplicates
+            var lobbyId = "lobby_" + nameOfPlayerOne + "_" + (aiHash || "nohash");
+            
+            // Remove existing lobby with this ID if it exists
+            var existingLobby = document.getElementById(lobbyId);
+            if (existingLobby) {
+                existingLobby.remove();
+            }
+            
             var stringToAdd = "";
-            stringToAdd = `<div class="box">` + nameOfPlayerOne + `<br>VS<br>`+ nameOfPlayerTwo + `
+            stringToAdd = `<div id="` + lobbyId + `"><div class="box">` + nameOfPlayerOne + `<br>VS<br>`+ nameOfPlayerTwo + `
                 </div><details><summary>Settings</summary>`;
             if (private === "Private") {
                 stringToAdd += "Private";
@@ -417,33 +426,33 @@
             stringToAdd += sector + " Sector";
             stringToAdd += "<br>";
             stringToAdd += "Time Created:<br>" + time;
+            if (aiHash && aiHash.length > 0 && nameOfPlayerOne === "{{ user.username }}") {
+                stringToAdd += "<br><strong>AI Join Code:</strong><br><code style='font-size: 1.2em; background: #e0e0e0; padding: 4px 8px; border-radius: 4px;'>" + aiHash + "</code>";
+            }
             stringToAdd += "</details>";
-            document.getElementById("add_to_me").innerHTML += stringToAdd;
             if (nameOfPlayerTwo === "" && nameOfPlayerOne !== "{{ user.username }}") {
-                document.getElementById("add_to_me").innerHTML +=
-                    `<button id=` + nameOfPlayerOne + ` onclick="joinLobby(this.id)">
+                stringToAdd += `<button id=` + nameOfPlayerOne + ` onclick="joinLobby(this.id)">
                     Join Lobby
                     </button>`;
             } else if (nameOfPlayerTwo !== "" && nameOfPlayerOne === "{{ user.username }}") {
                 playSound("/static/joinsound.wav");
             } else if (nameOfPlayerTwo === "{{ user.username }}") {
-                document.getElementById("add_to_me").innerHTML +=
-                    `<button id=` + nameOfPlayerOne + ` onclick="leaveLobby(this.id)">
+                stringToAdd += `<button id=` + nameOfPlayerOne + ` onclick="leaveLobby(this.id)">
                     Leave Lobby
                     </button>`;
             }
             if (nameOfPlayerOne === "{{ user.username }}") {
-                document.getElementById("add_to_me").innerHTML +=
-                    `<button onclick="removeLobby()">
+                stringToAdd += `<button onclick="removeLobby()">
                     Remove Lobby
                     </button>`;
             }
             if (nameOfPlayerOne === "{{ user.username }}" && nameOfPlayerTwo !== "") {
-                document.getElementById("add_to_me").innerHTML +=
-                    `<button id=` + nameOfPlayerOne + ` onclick="startGame(this.id)">
+                stringToAdd += `<button id=` + nameOfPlayerOne + ` onclick="startGame(this.id)">
                     Start Game
                     </button>`;
             }
+            stringToAdd += `</div>`;
+            document.getElementById("add_to_me").innerHTML += stringToAdd;
         }
 
         function addAnonymousError() {

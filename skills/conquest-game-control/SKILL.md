@@ -1,6 +1,6 @@
 ---
 name: conquest-game-control
-description: Operate the local Conquest LCG app through its lobby websocket and in-game REST API. Use this skill whenever the user asks to sign in, choose deck/faction, join or create a lobby, start or continue a live game, autoplay turns, or add debug logging while playing at localhost:8000.
+description: Operate the local Conquest LCG app through its lobby websocket. Use this skill whenever the user asks to sign in, choose deck/faction, join or create a lobby, or start a live game at localhost:8000.
 ---
 
 # Conquest Game Control (localhost)
@@ -8,7 +8,6 @@ Use this skill to reliably control a live game without rediscovering endpoints.
 
 ## Goal
 - Join lobby/game as a real user account with a selected deck.
-- Play legal actions over REST.
 - Emit debug logs for decisions and actions.
 
 ## Official game rules digest (for agent play decisions)
@@ -98,26 +97,12 @@ Use this as the gameplay baseline when selecting legal actions.
 - **Reactions** resolve after the triggering condition resolves.
 - For both interrupts and reactions, initiative player gets first opportunity, then players alternate until both pass.
 
-### Skill operating rule
-- Always choose commands from `interaction.legal_actions_for_requested_player`.
-- If inferred tabletop rules and API legal action tokens disagree, the API legal list is authoritative for execution.
-- Use this rules digest for prioritization and planning among legal options only.
-
-### AI account limitation policy
-- Use a fixed AI account instead of creating new user accounts per run.
-- Server policy is configured through:
-  - `AI_CONTROL_ENFORCE_ALLOWED_USERNAMES` (default: `true`)
-  - `AI_CONTROL_ALLOWED_USERNAMES` (default: `basicai`)
-- AI control endpoints reject actions for players outside the allowlist.
-- This does **not** prevent running multiple games at once with the same allowed account.
-- For local scripts, set `CONQUEST_AI_PLAYER` (or pass `--player`) to an allowed account.
-
 ### Source documents
 - `Learn-to-Play-web.pdf` (official Learn to Play)
 - `Rules-Reference-web.pdf` (official Rules Reference Guide)
 
 ## Bundled helper script
-- REST autoplay helper: `skills/conquest-game-control/scripts/play_turn.py`
+- Autoplay helper: `skills/conquest-game-control/scripts/play_turn.py`
 - Use it when the user wants immediate turn execution without re-implementing loop logic.
 - Typical usage:
   - `python skills/conquest-game-control/scripts/play_turn.py --player <username>`
@@ -129,7 +114,7 @@ Use this as the gameplay baseline when selecting legal actions.
 
 ## Preconditions
 - Server is reachable at `http://localhost:8000`.
-- Account already exists and is in `AI_CONTROL_ALLOWED_USERNAMES` when AI account restriction is enabled.
+- Account already exists.
 - Deck exists for that account under `decks/DeckStorage/<username>/`.
 
 ## Lobby control over websocket
@@ -150,71 +135,42 @@ Use this as the gameplay baseline when selecting legal actions.
 5. Confirm join:
    - Success signal: `Create lobby/<host>/<your_username>/...`.
 
-## REST game control
-Use these endpoints:
-- `GET /api/games/`
-- `GET /api/game/<game_id>/agent_state/?player=<username>`
-- `POST /api/game/<game_id>/agent_command/`
-- `POST /api/game/<game_id>/agent_action/`
+## REST API endpoints
 
-### REST skill discovery bootstrap
-- `GET /api/` first, then read:
-  - `GET /api/skills/`
-  - `GET /api/skills/<skill_id>/` (for full skill content)
+### Discovery
+- `GET /api/` - List all available endpoints
+- `GET /api/skills/` - List available skills
+- `GET /api/skills/<skill_id>/` - Get full skill documentation
 
-### Action contract
-- Only send `agent_action` when `turn.active_player == <username>`.
-- Action must be exactly one token from `interaction.legal_actions_for_requested_player`.
-- Never guess action format; always copy from legal list.
+### Authentication
+- `POST /api/auth-token/` - Get authentication token
+  - Request: `{"username": "...", "password": "..."}`
+  - Response: `{"token": "..."}`
 
-### Start-of-turn checklist (always do this first)
-1. Pull `agent_state`.
-2. Check question-box equivalents first:
-   - `search_and_choices.choice_context`
-   - `search_and_choices.choices_available`
-3. Check info-box/turn equivalents:
-   - `phase`
-   - `mode`
-   - `turn.required_action_type`
-   - `turn.active_player`
-4. Use only `interaction.legal_actions_for_requested_player` for execution.
-5. If choices are present, treat them as highest priority before non-choice actions.
+### Game management
+- `POST /api/create_bot_room/` - Create a bot game room
+  - Request: `{"name1": "...", "name2": "...", "id": "...", "private": "True|False"}`
+  - Response: `{"status": "success", "id": "..."}`
 
-### Setup + mulligan notes
-- The first meaningful setup decision is mulligan (yes/no) once a hand is loaded.
-- If `deck_loaded == false`, immediately load a deck before evaluating lines:
-  - `POST /api/game/<game_id>/agent_command/` with `command: "loaddeck/<deck_name>"`.
-- If in `SETUP` with:
-  - `players.<me>.deck_loaded == false`
-  - `players.<me>.hand_count == 0`
-  - legal actions only `pass-P1`/`pass-P2`
-  then the deck is not actually loaded for that player yet.
-- `loaddeck/<deck_name>` resolves from `decks/DeckStorage/<player>/<deck_name>`. If file is missing, setup will not progress to mulligan.
+### Deck management
+- `POST /api/send_deck_text/` - Upload deck text
+  - Request: `{"name": "...", "deck_text": "..."}`
+  - Response: `{"status": "..."}`
+- `POST /api/request_deck/` - Request deck text
+  - Request: `{"name": "...", "deck_name": "..."}`
+  - Response: `{"status": "success", "deck_text": "..."}`
 
-## Game notes (mechanics and API behavior)
-- If `deck_loaded == false`, load a deck immediately before making strategic decisions.
-- If setup is stuck with only `pass-P1`/`pass-P2` and no hand, treat it as a deck-load/path issue, not a tactical choice.
-- `agent_action` must use an exact token from `interaction.legal_actions_for_requested_player`; never synthesize token formats.
+### AI lobby management
+- `GET /api/ai_lobby/<hash>/` - Query a lobby by AI join hash
+  - Response: `{"status": "success", "lobby": {...}}` or `{"status": "error", "error": "Lobby not found"}`
+- `POST /api/ai_join/<hash>/` - Bot joins a lobby by AI join hash
+  - Request: `{"bot_name": "...", "deck_name": "..."}`
+  - Response: `{"status": "success", "message": "...", "lobby": {...}}`
+
+## Game notes (mechanics)
 - Planet reward values in engine data are stored as `(cards, resources)` order (not `(resources, cards)`), so a planet entry like `(0, 2)` means 0 cards and 2 resources.
-- Many deploy plays are staged token chains: `HAND/...` selects a card, then a follow-up token such as `PLANETS/x` is required to finish resolution.
-- After any staged first token, immediately refresh/check legal actions and complete the chain before ending the turn.
-- Some plays temporarily switch `mode` to `ACTION` with only `pass-P1` legal; that pass only closes the subwindow. Re-check state afterward and, if back in normal deploy with `my_has_passed == false`, send another deploy-phase pass to truly pass.
-- In combat `Indirect` steps, assignments can require multiple sequential `IN_PLAY/...` selections; after each pick, refresh state and continue until legal actions clear or active player changes.
-- In combat `Damage` windows, legal actions can be `HAND/<player>/<index>` plus `pass`; those `HAND` tokens are shield-card plays from hand for the pending damage packet.
-- In `required_action_type: Combat Turn`, attack declaration can be a two-step chain: first select your attacker (`IN_PLAY/<you>/<planet>/<unit>`), then select the defender (`IN_PLAY/<opponent>/<planet>/<unit>`).
 - Command winner calculation in this engine uses command totals; warlords are represented with effectively auto-win command strength (`999`) unless opposed by another warlord.
 - Helvetis has two separate effects at different times: command reward (`0 cards, 2 resources`) during command struggle resolution, and a separate forced activity coin-flip/indirect-damage effect when activities resolve in combat setup.
-- Read question-box equivalents first (`choice_context`, `choices_available`) before normal deploy/combat planning.
-- In `agent_state`, players are keyed by number (`"1"`, `"2"`); identify your side by matching `players[*].name` to your account name.
-- `Earth Caste Technician` search is filtered to cards matching **Drone trait OR Attachment type**; legal selections appear as `SEARCH/<index>` tokens for matching cards only.
-- In `required_action_type: Commitment`, your legal actions are `PLANETS/x`; after choosing one, state may switch to `required_action_type: Command not Commitment` with zero legal actions while command struggles auto-resolve.
-- In `required_action_type: Command not Commitment`, a pass-only window (`pass-P1`) can still appear for you; consume it, then re-check whether legal actions clear.
-- Planet activity prompts can chain across multiple planets in one sequence (for example `Hostaryn XXI` -> `Deltadurne` -> `Hangyz`), with each step requiring a fresh legal-action check before acting.
-- For activity prompts where `choice_context` is the planet name (for example `Deltadurne`, `Hangyz`), `CHOICE/0` is the resolve path and `CHOICE/1` skips that activity.
-- `Hangyz Scrying` reveals the top card name in `choices_available`; `CHOICE/0` discards that card, while `CHOICE/1` keeps it on top.
-- Caldera activity can transition into a `required_action_type: Reaction` subwindow where only `pass-P1` is legal; always consume that pass if it is the only legal token.
-- Combat flow can also present `required_action_type: Outside Combat` with only `pass-P1` legal; this is another pass-through subwindow and should be consumed immediately.
-- If `requested_player` appears to still be your name but `legal_actions_for_requested_player` is empty, treat it as no actionable step for you and wait for the next state change.
 
 ## General strategy notes
 - Prefer proactive board/economy development over early passes when legal non-pass deploys exist.
@@ -242,27 +198,9 @@ Before or during turns, send:
 And log per step:
 - phase
 - active player
-- required action type
-- legal action candidates
 - chosen action
 - applied action
-
-## Turn loop
-1. Pull `agent_state`.
-2. ~~Stop if phase starts with `FIN`.~~ CHANGED: please replace with a game complete check that does not rely on phase (was breaking my neural network). I recommend simply not having any legal actions if the game is completed.
-3. If not active player, wait/poll.
-4. If active:
-   - rank/select a legal action (win-seeking heuristic),
-   - submit via `agent_action`,
-   - repeat until control passes.
-
-## Default decision policy (if no user-specific strategy provided)
-- Prefer non-pass actions if any legal non-pass exists.
-- Avoid concede/resign/force-quit actions.
-- During mulligan choice, default to keeping a playable hand unless clearly unplayable.
-- When uncertain, still choose from legal tokens only.
 
 ## Failure handling
 - If login fails: report concise reason (bad creds, csrf parse failure, no session).
 - If no open lobby: report currently visible lobbies and wait.
-- If action rejected: refresh state and use current legal tokens only.

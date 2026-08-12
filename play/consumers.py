@@ -27,7 +27,7 @@ planet_array = Initfunctions.init_planet_cards()
 apoka_errata_cards_array = Initfunctions.init_apoka_errata_cards()
 blackstone_errata_cards_array = Initfunctions.init_blackstone_errata_cards()
 
-active_lobbies = [] # Format: (p_one_name, p_two_name, private, errata, sector, deck_name_1, deck_name_2, time, first_player)
+active_lobbies = [] # Format: (p_one_name, p_two_name, private, errata, sector, deck_name_1, deck_name_2, time, first_player, ai_join_hash)
 spectator_games = []  # Format: (p_one_name, p_two_name, game_id, end_time)
 active_games = []
 players_in_lobby = []
@@ -213,9 +213,10 @@ class LobbyConsumer(AsyncWebsocketConsumer):
 
     async def send_lobbies(self, all=True):
         for i in range(len(active_lobbies)):
+            ai_hash = active_lobbies[i][9] if len(active_lobbies[i]) > 9 else ""
             message = "Create lobby/" + active_lobbies[i][0] + "/" + active_lobbies[i][1] + "/" \
                       + active_lobbies[i][2] + "/" + active_lobbies[i][3] + "/" + active_lobbies[i][4] +\
-                      "/" + active_lobbies[i][7] + "/" + active_lobbies[i][8] + "/false"
+                      "/" + active_lobbies[i][7] + "/" + active_lobbies[i][8] + "/false" + "/" + ai_hash
             if all:
                 await self.channel_layer.group_send(
                     self.room_group_name, {"type": "chat.message", "message": message}
@@ -273,15 +274,19 @@ class LobbyConsumer(AsyncWebsocketConsumer):
                 errata = "Apoka"
             else:
                 errata = "Blackstone"
-            lobby_data = [self.name, "", privacy, errata, split_message[3], split_message[4], "", datetime.datetime.today().strftime("%I:%M%p, %B %d, %Y"), split_message[5]]
-            active_lobbies.append(lobby_data)
             ai_opponent = split_message[6]
+            ai_join_hash = ""
+            if ai_opponent == "true":
+                # Generate a random hash for the bot to use when joining
+                ai_join_hash = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(12))
+            lobby_data = [self.name, "", privacy, errata, split_message[3], split_message[4], "", datetime.datetime.today().strftime("%I:%M%p, %B %d, %Y"), split_message[5], ai_join_hash]
+            active_lobbies.append(lobby_data)
             print(ai_opponent)
             print(active_lobbies)
             split_message[0] += "/" + lobby_data[0] + "/" + lobby_data[1] + \
                                 "/" + lobby_data[2] + "/" + lobby_data[3] + \
                                 "/" + lobby_data[4] + "/" + lobby_data[7] + \
-                                "/" + lobby_data[8] + "/" + ai_opponent
+                                "/" + lobby_data[8] + "/" + ai_opponent + "/" + ai_join_hash
             print(split_message[0])
             await self.channel_layer.group_send(
                 self.room_group_name, {"type": "chat.message", "message": split_message[0]}
