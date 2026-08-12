@@ -29,13 +29,10 @@
 }
 
 #site-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
     text-align: center;
     padding: 8px 0;
     background-color: #333;
+    margin-top: auto;
 }
 
 .version-info {
@@ -61,6 +58,13 @@ li a {
 body {
     background: #050505 url("images/ImperialAquila.jpg") no-repeat;
     background-size: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
 }
 
 p {
