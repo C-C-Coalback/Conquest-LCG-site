@@ -186,6 +186,12 @@ Use this as the gameplay baseline when selecting legal actions.
 ## Post-join game startup checklist (REST-only)
 **Do these in order as soon as the bot is in a live game. All steps use REST only — no WebSocket required.**
 
+1. Read opponent faction
+2. List decks and select one
+3. Load deck
+4. Check info-box: **Is it our turn?** (scan hand; do not answer yet if not our turn)
+5. If yes and mulligan is pending → answer Yes/No
+
 ### Step 1: Read opponent faction
 ```http
 GET /api/ai_game/<game_id>/?bot_name=Conqueror
@@ -209,19 +215,38 @@ Body: {"bot_name": "Conqueror", "load_deck": "<deck_name>"}
 - Deck file must exist at `decks/DeckStorage/Conqueror/<deck_name>` (exact filename, including spaces).
 - On success, response includes `game.bot.deck_loaded: true` and `game.bot.hand`.
 
-### Step 4: Scan hand and answer mulligan
+### Step 4: After deck selection — check info-box first ("Is it our turn?")
+**Do this immediately after loading a deck. Do not answer mulligan until you confirm it is the bot's turn.**
+
 ```http
 GET /api/ai_game/<game_id>/?bot_name=Conqueror
 ```
-- Read `bot.hand` (list of card names).
-- Read `prompt`:
-  - `prompt.active` — whether a choice is pending
-  - `prompt.is_bots_turn` — whether the bot is the one being asked
-  - `prompt.context` — e.g. `"Mulligan Opening Hand?"`
-  - `prompt.binary_yes_no` — `true` when choices are exactly `["Yes", "No"]`
-  - `prompt.yes_index` / `prompt.no_index` — which index maps to Yes/No
 
-Answer via REST:
+1. **Scan your hand** from `bot.hand` (list of card names).
+2. **Read the info-box** to decide whose turn it is:
+   - `info_box.waiting_on` — player the UI is waiting on
+   - `info_box.text` / `info_box.details` — human-readable phase/mode/choice text
+   - `info_box.hint` — optional guidance string
+3. **Read the prompt** (structured choice, if any):
+   - `prompt.active` — whether a choice is pending
+   - `prompt.is_bots_turn` — `true` only when the bot is the player being asked
+   - `prompt.waiting_on` — same as info-box waiting target when a choice is active
+   - `prompt.context` — e.g. `"Mulligan Opening Hand?"`
+   - `prompt.binary_yes_no` — `true` when choices are exactly `["Yes", "No"]`
+   - `prompt.yes_index` / `prompt.no_index` — which index maps to Yes/No
+
+**Is it our turn?** Treat the answer as yes only when all of these hold:
+- `prompt.active == true`
+- `prompt.is_bots_turn == true` (preferred), or `prompt.waiting_on` / `info_box.waiting_on` equals the bot name (e.g. `Conqueror`)
+- `prompt.context` is the question you intend to answer (for opening: `"Mulligan Opening Hand?"`)
+
+If it is **not** the bot's turn:
+- Do **not** submit Yes/No yet.
+- Poll `GET /api/ai_game/...` until `is_bots_turn` is true (or `waiting_on` becomes the bot name).
+
+### Step 5: Answer mulligan only after turn check passes
+Only if Step 4 determined **it is the bot's turn** and the context is mulligan:
+
 ```http
 POST /api/ai_action/<game_id>/
 Body: {"bot_name": "Conqueror", "answer": "No"}
@@ -232,6 +257,13 @@ Body: {"bot_name": "Conqueror", "answer": "No"}
 **Default strategy**: prefer `"No"` unless the hand is clearly unplayable.
 
 **Mulligan order**: player 1 is asked first, then player 2. After both answer, the game proceeds to DEPLOY phase (or Necron enslaved-faction choice if applicable).
+
+**Checklist after deck load (Conqueror / REST bots):**
+1. Load deck
+2. `GET /api/ai_game/` → scan hand
+3. Check info-box / prompt: **Is it our turn?**
+4. If no → wait/poll
+5. If yes and question is mulligan → submit `answer: "Yes"` or `"No"`
 
 ## WebSocket fallback (legacy)
 For bots that need real-time event streaming, the WebSocket interface is still available:
