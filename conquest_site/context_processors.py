@@ -17,10 +17,10 @@ def version_info(request):
                 ref_file = base_dir / '.git' / ref_path
                 if ref_file.exists():
                     commit_hash = ref_file.read_text().strip()[:7]
-                    version = f"git:{commit_hash}"
+                    version = f"git commit:{commit_hash}"
             else:
                 # Detached HEAD - direct hash
-                version = f"git:{head_content[:7]}"
+                version = f"git commit:{head_content[:7]}"
     except (OSError, IOError):
         pass
     
