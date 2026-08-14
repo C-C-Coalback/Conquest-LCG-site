@@ -363,10 +363,10 @@ class LobbyConsumer(AsyncWebsocketConsumer):
                     current_time = datetime.datetime.now()
                     time_change = datetime.timedelta(minutes=1440)
                     end_time = current_time + time_change
-                    spectator_games.append((first_name, second_name, game_id, end_time))
+                    spectator_games.append((first_player, second_player, game_id, end_time))
                     print("End game time:")
                     print(end_time)
-                message = "Move to game/" + game_id + "/" + first_name + "/" + second_name
+                message = "Move to game/" + game_id + "/" + first_player + "/" + second_player
                 await self.channel_layer.group_send(
                     self.room_group_name, {"type": "chat.message", "message": message}
                 )
