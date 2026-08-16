@@ -2779,6 +2779,7 @@ async def update_game_event_action_hq(self, name, game_update_string):
             if game_update_string[1] == primary_player.get_number():
                 if primary_player.headquarters[unit_pos].get_attachments():
                     if primary_player.get_ready_given_pos(planet_pos, unit_pos):
+                        self.action_object.position_of_actioned_card = (planet_pos, unit_pos)
                         primary_player.exhaust_given_pos(planet_pos, unit_pos)
                         self.action_object.misc_target_unit = (planet_pos, unit_pos)
                         self.action_object.chosen_first_card = True

@@ -760,6 +760,7 @@ async def update_game_event_action_planet(self, name, game_update_string):
                 await self.send_update_message("Cannot target planet; insufficient resources for tax effects.")
     elif self.action_object.action_chosen == "Squadron Redeployment":
         if self.action_object.chosen_first_card:
+            self.action_object.position_of_actioned_card = (-1, -1)
             origin_planet, origin_pos = self.action_object.misc_target_unit
             dest_planet = chosen_planet
             primary_player.reset_aiming_reticle_in_play(origin_planet, origin_pos)
