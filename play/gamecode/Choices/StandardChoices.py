@@ -2184,7 +2184,6 @@ async def resolve_choice(self, primary_player, secondary_player, name, game_upda
         primary_player.reset_aiming_reticle_in_play(planet_pos, unit_pos)
         secondary_player.reset_aiming_reticle_in_play(self.attacker_planet, self.attacker_position)
         self.reset_combat_positions()
-        self.shining_blade_active = False
         self.number_with_combat_turn = primary_player.get_number()
         self.player_with_combat_turn = primary_player.get_name_player()
         self.attack_being_resolved = False

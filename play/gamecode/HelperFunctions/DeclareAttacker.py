@@ -97,6 +97,9 @@ async def declare_attacker(self, name, game_update_string):
                         self.create_reaction("Overseer Drone", player.name_player,
                                              (int(player.number), overseer_planet, i),
                                              (self.attacker_planet, self.attacker_position))
+        if player.search_attachments_at_pos(self.attacker_planet, self.attacker_position, "The Shining Blade"):
+            self.shining_blade_active = True
+            await self.send_update_message("The Shining Blade can be used to strike an adjacent planet.")
         if player.get_ability_given_pos(self.attacker_planet, self.attacker_position) \
                 == "Biel-Tan Warp Spiders":
             self.create_reaction("Biel-Tan Warp Spiders", player.name_player,

@@ -1563,7 +1563,6 @@ async def start_resolving_reaction(self, name, game_update_string):
             primary_player.reset_aiming_reticle_in_play(planet_pos, unit_pos)
             secondary_player.reset_aiming_reticle_in_play(self.attacker_planet, self.attacker_position)
             self.reset_combat_positions()
-            self.shining_blade_active = False
             self.number_with_combat_turn = primary_player.get_number()
             self.player_with_combat_turn = primary_player.get_name_player()
             self.need_to_move_to_hq = True
@@ -1598,7 +1597,6 @@ async def start_resolving_reaction(self, name, game_update_string):
             primary_player.reset_aiming_reticle_in_play(planet_pos, unit_pos)
             secondary_player.reset_aiming_reticle_in_play(self.attacker_planet, self.attacker_position)
             self.reset_combat_positions()
-            self.shining_blade_active = False
             self.number_with_combat_turn = primary_player.get_number()
             self.player_with_combat_turn = primary_player.get_name_player()
             self.need_to_move_to_hq = True
@@ -1708,7 +1706,6 @@ async def start_resolving_reaction(self, name, game_update_string):
             primary_player.move_unit_to_planet(planet_pos, unit_pos, warlord_pla)
             secondary_player.reset_aiming_reticle_in_play(self.attacker_planet, self.attacker_position)
             self.reset_combat_positions()
-            self.shining_blade_active = False
             self.number_with_combat_turn = primary_player.get_number()
             self.player_with_combat_turn = primary_player.get_name_player()
             self.need_to_move_to_hq = True
@@ -1720,7 +1717,6 @@ async def start_resolving_reaction(self, name, game_update_string):
             primary_player.move_unit_at_planet_to_hq(planet_pos, unit_pos)
             secondary_player.reset_aiming_reticle_in_play(self.attacker_planet, self.attacker_position)
             self.reset_combat_positions()
-            self.shining_blade_active = False
             self.number_with_combat_turn = primary_player.get_number()
             self.player_with_combat_turn = primary_player.get_name_player()
             self.need_to_move_to_hq = True
@@ -1764,7 +1760,6 @@ async def start_resolving_reaction(self, name, game_update_string):
                 primary_player.reset_aiming_reticle_in_play(planet_pos, unit_pos)
                 secondary_player.reset_aiming_reticle_in_play(self.attacker_planet, self.attacker_position)
                 self.reset_combat_positions()
-                self.shining_blade_active = False
                 self.number_with_combat_turn = primary_player.get_number()
                 self.player_with_combat_turn = primary_player.get_name_player()
                 self.need_to_move_to_hq = True

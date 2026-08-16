@@ -342,23 +342,6 @@ async def update_game_event_combat_section(self, name, game_update_string):
                                                 + " ATK from Launch Da Snots!"
                                             )
                                             player.discard_card_from_hand(hand_pos)
-    elif len(game_update_string) == 6:
-        if game_update_string[0] == "ATTACHMENT" and game_update_string[1] == "IN_PLAY":
-            if game_update_string[2] == self.number_with_combat_turn:
-                if self.number_with_combat_turn == "1":
-                    player = self.p1
-                else:
-                    player = self.p2
-                planet_pos = int(game_update_string[3])
-                unit_pos = int(game_update_string[4])
-                attachment_pos = int(game_update_string[5])
-                if planet_pos == self.attacker_planet and unit_pos == self.attacker_position:
-                    if player.cards_in_play[planet_pos + 1][unit_pos]. \
-                            get_attachments()[attachment_pos].get_ability() == "The Shining Blade" \
-                            and player.cards_in_play[planet_pos + 1][unit_pos]. \
-                            get_attachments()[attachment_pos].name_owner == player.name_player:
-                        self.shining_blade_active = True
-                        await self.send_update_message("The Shining Blade activated!")
     elif len(game_update_string) == 4:
         if game_update_string[0] == "RESERVE":
             if self.start_battle_deepstrike:

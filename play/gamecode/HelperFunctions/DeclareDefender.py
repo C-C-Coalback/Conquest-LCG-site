@@ -660,7 +660,6 @@ async def declare_defender(self, name, game_update_string):
                         primary_player.reset_aiming_reticle_in_play(self.attacker_planet,
                                                                     self.attacker_position)
                 self.reset_combat_positions()
-                self.shining_blade_active = False
                 self.number_with_combat_turn = secondary_player.get_number()
                 self.player_with_combat_turn = secondary_player.get_name_player()
                 if self.unit_will_move_after_attack:

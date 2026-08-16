@@ -8264,6 +8264,7 @@ class Game:
 
     def reset_combat_positions(self):
         self.reset_automated_passed_actions()
+        self.shining_blade_active = False
         self.defender_position = -1
         self.defender_planet = -1
         self.attacker_position = -1
