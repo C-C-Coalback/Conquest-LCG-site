@@ -734,6 +734,7 @@ def resolve_winnings(self, winner, loser, planet_id):
         winner.draw_card()
         winner.add_resources(1)
     winner.won_command_struggles_planets_round[planet_id] = True
+    winner.command_struggles_won_this_phase += 1
     resources_won = chosen_planet.get_resources()
     cards_won = chosen_planet.get_cards()
     extra_resources, extra_cards = winner.get_bonus_winnings_at_planet(planet_id)
