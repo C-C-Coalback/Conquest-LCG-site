@@ -954,7 +954,8 @@ async def start_resolving_reaction(self, name, game_update_string):
             self.mask_jain_zar_check_reactions(primary_player, secondary_player)
             self.delete_reaction()
         elif current_reaction == "Blitza-Bommer":
-            secondary_player.total_indirect_damage += 3
+            secondary_player.total_indirect_damage = 3
+            secondary_player.indirect_damage_applied = 0
             self.location_of_indirect = "PLANET"
             self.valid_targets_for_indirect = ["Army", "Synapse", "Token", "Warlord"]
             self.planet_of_indirect = planet_pos
